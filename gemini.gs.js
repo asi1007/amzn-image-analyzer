@@ -5,49 +5,73 @@ class GeminiService {
   }
 
   getTextFromImage(imageUrl, prompt) {
-    if (!this.apiKey) {
-      throw new Error('GEMINI_API_KEYが設定されていません');
-    }
+    try {
+      if (!this.apiKey) {
+        const error = 'GEMINI_API_KEYが設定されていません';
+        Logger.log(`[Gemini Error] ${error}`);
+        throw new Error(error);
+      }
 
-    const response = UrlFetchApp.fetch(imageUrl);
-    const blob = response.getBlob();
-    const base64Image = Utilities.base64Encode(blob.getBytes());
-    
-    const payload = {
-      contents: [
-        {
-          parts: [
-            {
-              inlineData: {
-                mimeType: blob.getContentType(),
-                data: base64Image
+      const response = UrlFetchApp.fetch(imageUrl);
+      const blob = response.getBlob();
+      const base64Image = Utilities.base64Encode(blob.getBytes());
+      
+      const payload = {
+        contents: [
+          {
+            parts: [
+              {
+                inlineData: {
+                  mimeType: blob.getContentType(),
+                  data: base64Image
+                }
+              },
+              {
+                text: prompt
               }
-            },
-            {
-              text: prompt
-            }
-          ]
-        }
-      ]
-    };
+            ]
+          }
+        ]
+      };
 
-    const options = {
-      method: "post",
-      contentType: "application/json",
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    };
+      const options = {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      };
 
-    const url = `${this.baseUrl}?key=${this.apiKey}`;
-    const geminiResponse = UrlFetchApp.fetch(url, options);
-    const json = JSON.parse(geminiResponse.getContentText());
-    
-    if (!json.candidates || !json.candidates[0]) {
-      throw new Error('Gemini APIからの応答が不正です');
+      const url = `${this.baseUrl}?key=${this.apiKey}`;
+      const geminiResponse = UrlFetchApp.fetch(url, options);
+      const responseCode = geminiResponse.getResponseCode();
+      const responseText = geminiResponse.getContentText();
+      
+      if (responseCode !== 200) {
+        const error = `Gemini API HTTP Error: ${responseCode} - ${responseText}`;
+        Logger.log(`[Gemini Error] ${error}`);
+        throw new Error(error);
+      }
+
+      const json = JSON.parse(responseText);
+      
+      if (json.error) {
+        const error = `Gemini API Error: ${JSON.stringify(json.error)}`;
+        Logger.log(`[Gemini Error] ${error}`);
+        throw new Error(error);
+      }
+      
+      if (!json.candidates || !json.candidates[0]) {
+        const error = `Gemini APIからの応答が不正です: ${responseText}`;
+        Logger.log(`[Gemini Error] ${error}`);
+        throw new Error(error);
+      }
+      
+      const text = json.candidates[0].content.parts[0].text;
+      return text;
+    } catch (error) {
+      Logger.log(`[Gemini Error] getTextFromImage failed - URL: ${imageUrl}, Prompt: ${prompt}, Error: ${error.message}`);
+      throw error;
     }
-    
-    const text = json.candidates[0].content.parts[0].text;
-    return text;
   }
 }
 
