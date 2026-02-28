@@ -1,7 +1,7 @@
 class ProductService {
-  constructor(keepaService, geminiService, sheetService) {
+  constructor(keepaService, aiService, sheetService) {
     this.keepaService = keepaService;
-    this.geminiService = geminiService;
+    this.aiService = aiService;
     this.sheetService = sheetService;
     this.imageBaseUrl = "https://images-na.ssl-images-amazon.com/images/I/";
   }
@@ -26,7 +26,7 @@ class ProductService {
 
       prompts.forEach(prompt => {
         try {
-          const analysisResult = this.geminiService.getTextFromImage(imageUrl, prompt);
+          const analysisResult = this.aiService.getTextFromImage(imageUrl, prompt);
           rowData.push(analysisResult);
         } catch (error) {
           Logger.log(`エラー: ${error.message} (ASIN: ${asin}, URL: ${imageUrl})`);

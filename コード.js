@@ -1,11 +1,11 @@
 class AddDataUseCase {
   constructor() {
     this.keepaService = new KeepaService();
-    this.geminiService = new GeminiService();
+    this.aiService = new ChatGptService();
     this.sheetService = new SheetService();
     this.productService = new ProductService(
       this.keepaService,
-      this.geminiService,
+      this.aiService,
       this.sheetService
     );
   }
@@ -13,7 +13,7 @@ class AddDataUseCase {
   execute() {
     const imageDataSheet = this.sheetService.getImageDataSheet();
     const asins = this.sheetService.getASINs(imageDataSheet);
-    
+
     if (asins.length === 0) {
       Logger.log('ASINが見つかりませんでした');
       return;
@@ -36,11 +36,11 @@ function AddData() {
 
 function test2() {
   const keepaService = new KeepaService();
-  const geminiService = new GeminiService();
+  const aiService = new ChatGptService();
   const sheetService = new SheetService();
   const productService = new ProductService(
     keepaService,
-    geminiService,
+    aiService,
     sheetService
   );
 
@@ -50,7 +50,7 @@ function test2() {
     (acc, asin) => productService.concatASINData(acc, asin),
     []
   );
-  
+
   sheetService.writeImageData(imageDataSheet, asinData);
   Logger.log('テスト完了');
 }

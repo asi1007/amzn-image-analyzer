@@ -53,7 +53,7 @@ class SearchProductTypesUseCase {
 
 class GenerateListingDataUseCase {
   constructor() {
-    this.geminiService = new GeminiService();
+    this.aiService = new ChatGptService();
     this.listingSheetService = new ListingSheetService();
     this.promptCol = 3;
   }
@@ -70,16 +70,16 @@ class GenerateListingDataUseCase {
 
       const row = i + 2;
       try {
-        const result = this.geminiService.generateText(prompt);
+        const result = this.aiService.generateText(prompt);
         sheet.getRange(row, this.listingSheetService.valueCol).setValue(result.trim());
         count++;
       } catch (error) {
-        Logger.log(`行${row}のGemini生成に失敗: ${error.message}`);
+        Logger.log(`行${row}のAI生成に失敗: ${error.message}`);
         sheet.getRange(row, this.listingSheetService.valueCol).setValue(`エラー: ${error.message}`);
       }
     }
 
-    Logger.log(`${count}件のデータをGeminiで生成しました`);
+    Logger.log(`${count}件のデータを生成しました`);
   }
 }
 
