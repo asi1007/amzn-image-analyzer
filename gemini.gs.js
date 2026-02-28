@@ -4,6 +4,44 @@ class GeminiService {
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent';
   }
 
+  generateText(prompt) {
+    if (!this.apiKey) {
+      throw new Error('GEMINI_API_KEYが設定されていません');
+    }
+
+    const payload = {
+      contents: [{ parts: [{ text: prompt }] }]
+    };
+
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const url = `${this.baseUrl}?key=${this.apiKey}`;
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    if (responseCode !== 200) {
+      throw new Error(`Gemini API HTTP Error: ${responseCode} - ${responseText}`);
+    }
+
+    const json = JSON.parse(responseText);
+
+    if (json.error) {
+      throw new Error(`Gemini API Error: ${JSON.stringify(json.error)}`);
+    }
+
+    if (!json.candidates || !json.candidates[0]) {
+      throw new Error(`Gemini APIからの応答が不正です: ${responseText}`);
+    }
+
+    return json.candidates[0].content.parts[0].text;
+  }
+
   getTextFromImage(imageUrl, prompt) {
     try {
       if (!this.apiKey) {

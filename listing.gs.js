@@ -1,0 +1,99 @@
+class CreateListingUseCase {
+  constructor() {
+    this.authService = new SpApiAuthService();
+    this.listingService = new SpApiListingService(this.authService);
+    this.listingSheetService = new ListingSheetService();
+  }
+
+  execute() {
+    const sheet = this.listingSheetService.getSheet();
+
+    const data = this.listingSheetService.getListingData(sheet);
+
+    this.listingSheetService.writeSku(sheet, data.sku);
+
+    try {
+      const attributes = this.listingSheetService.buildAttributes(data);
+      const result = this.listingService.createListing(data.sku, data.productType, attributes);
+      const status = `${result.status} (${new Date().toLocaleString('ja-JP')})`;
+      this.listingSheetService.writeStatus(sheet, status);
+      Logger.log(`SKU: ${data.sku} の登録が完了しました - Status: ${result.status}`);
+    } catch (error) {
+      const errorStatus = `エラー: ${error.message} (${new Date().toLocaleString('ja-JP')})`;
+      this.listingSheetService.writeStatus(sheet, errorStatus);
+      Logger.log(`SKU: ${data.sku} の登録に失敗しました - ${error.message}`);
+    }
+  }
+}
+
+class SearchProductTypesUseCase {
+  constructor() {
+    this.authService = new SpApiAuthService();
+    this.productTypeService = new SpApiProductTypeService(this.authService);
+    this.listingSheetService = new ListingSheetService();
+  }
+
+  execute(keyword) {
+    if (!keyword) {
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('商品タイプ検索');
+      if (sheet) {
+        keyword = sheet.getRange('A2').getValue();
+      }
+      if (!keyword) {
+        throw new Error('検索キーワードが指定されていません');
+      }
+    }
+
+    const results = this.productTypeService.searchProductTypes(keyword);
+    this.listingSheetService.writeProductTypes(results);
+    Logger.log(`${results.length}件の商品タイプが見つかりました`);
+    return results;
+  }
+}
+
+class GenerateListingDataUseCase {
+  constructor() {
+    this.geminiService = new GeminiService();
+    this.listingSheetService = new ListingSheetService();
+    this.promptCol = 3;
+  }
+
+  execute() {
+    const sheet = this.listingSheetService.getSheet();
+    const lastRow = this.listingSheetService.rows.status;
+    const prompts = sheet.getRange(2, this.promptCol, lastRow - 1, 1).getValues();
+    let count = 0;
+
+    for (let i = 0; i < prompts.length; i++) {
+      const prompt = prompts[i][0];
+      if (!prompt) continue;
+
+      const row = i + 2;
+      try {
+        const result = this.geminiService.generateText(prompt);
+        sheet.getRange(row, this.listingSheetService.valueCol).setValue(result.trim());
+        count++;
+      } catch (error) {
+        Logger.log(`行${row}のGemini生成に失敗: ${error.message}`);
+        sheet.getRange(row, this.listingSheetService.valueCol).setValue(`エラー: ${error.message}`);
+      }
+    }
+
+    Logger.log(`${count}件のデータをGeminiで生成しました`);
+  }
+}
+
+function GenerateListingData() {
+  const useCase = new GenerateListingDataUseCase();
+  useCase.execute();
+}
+
+function CreateListing() {
+  const useCase = new CreateListingUseCase();
+  useCase.execute();
+}
+
+function SearchProductTypes() {
+  const useCase = new SearchProductTypesUseCase();
+  useCase.execute();
+}
