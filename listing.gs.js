@@ -167,3 +167,44 @@ function SearchProductTypes() {
   const useCase = new SearchProductTypesUseCase();
   useCase.execute();
 }
+
+function ShowProductTypeAttributes() {
+  const authService = new SpApiAuthService();
+  const productTypeService = new SpApiProductTypeService(authService);
+  const listingSheetService = new ListingSheetService();
+
+  const sheet = listingSheetService.getSheet();
+  const row = listingSheetService.findRow(sheet, '商品タイプ');
+  if (!row) throw new Error('商品タイプが見つかりません');
+  const productType = sheet.getRange(row, listingSheetService.valueCol).getValue();
+  if (!productType) throw new Error('商品タイプが未入力です');
+
+  const definition = productTypeService.getProductTypeDefinition(productType);
+  const schema = definition.schema;
+  const schemaObj = JSON.parse(JSON.stringify(schema));
+  const properties = schemaObj.properties || {};
+
+  const rows = [];
+  for (const [key, prop] of Object.entries(properties)) {
+    const title = prop.title || '';
+    const required = (schemaObj.required || []).includes(key);
+    rows.push([key, title, required ? '必須' : '任意']);
+  }
+
+  rows.sort((a, b) => {
+    if (a[2] === '必須' && b[2] !== '必須') return -1;
+    if (a[2] !== '必須' && b[2] === '必須') return 1;
+    return 0;
+  });
+
+  const sheetName = '商品タイプ属性一覧';
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let attrSheet = ss.getSheetByName(sheetName);
+  if (!attrSheet) attrSheet = ss.insertSheet(sheetName);
+  attrSheet.clear();
+  attrSheet.getRange(1, 1, 1, 3).setValues([['属性キー', '表示名', '必須/任意']]);
+  if (rows.length > 0) {
+    attrSheet.getRange(2, 1, rows.length, 3).setValues(rows);
+  }
+  Logger.log(`${rows.length}件の属性を書き出しました`);
+}

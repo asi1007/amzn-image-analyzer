@@ -36,8 +36,7 @@ class ListingSheetService {
       '品目の寸法（L x W）': { key: 'item_dimensions', type: 'dimensions' },
       '商品本体サイズ': { key: 'item_dimensions', type: 'dimensions' },
       'カラー': { key: 'color', type: 'text' },
-      'メーカー希望小売価格・定価': { key: 'list_price', type: 'list_price' },
-      '危険物規制': { key: 'ghs_classification_class', type: 'value' }
+      'メーカー希望小売価格・定価': { key: 'list_price', type: 'list_price' }
     };
   }
 
@@ -181,7 +180,7 @@ class ListingSheetService {
         case 'list_price':
           attrs[mapping.key] = [{
             currency: 'JPY',
-            value_with_tax: Number(value),
+            value: Number(value),
             marketplace_id: mp
           }];
           break;
@@ -191,9 +190,6 @@ class ListingSheetService {
     if (bulletPoints.length > 0) {
       attrs.bullet_point = bulletPoints;
     }
-
-    attrs.is_exclusive = [{ value: 'Yes', marketplace_id: mp }];
-    attrs.item_condition = [{ value: 'new_new', marketplace_id: mp }];
 
     return attrs;
   }
