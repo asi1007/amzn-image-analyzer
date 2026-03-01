@@ -186,10 +186,8 @@ function ShowProductTypeAttributes() {
   if (schemaObj.link) {
     const schemaUrl = schemaObj.link.resource;
     Logger.log('Schema URL: ' + schemaUrl);
-    const accessToken = authService.getAccessToken();
     const schemaResponse = UrlFetchApp.fetch(schemaUrl, {
       method: 'get',
-      headers: { 'x-amz-access-token': accessToken },
       muteHttpExceptions: true
     });
     schemaObj = JSON.parse(schemaResponse.getContentText());

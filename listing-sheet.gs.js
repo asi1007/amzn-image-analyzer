@@ -25,7 +25,6 @@ class ListingSheetService {
       '箇条書き5': { key: 'bullet_point', type: 'bullet' },
       '検索キーワード': { key: 'generic_keyword', type: 'value' },
       '販売価格': { key: 'purchasable_offer', type: 'price' },
-      'コンディション': { key: 'condition_type', type: 'value' },
       'EAN/JAN': { key: 'externally_assigned_product_identifier', type: 'ean' },
       'メーカー名': { key: 'manufacturer', type: 'text' },
       '原産国': { key: 'country_of_origin', type: 'value' },
@@ -33,10 +32,11 @@ class ListingSheetService {
       'パッケージ内に含まれる商品の数': { key: 'number_of_items', type: 'number' },
       'パッケージの重さ': { key: 'item_package_weight', type: 'weight' },
       'パッケージ寸法': { key: 'item_package_dimensions', type: 'dimensions' },
-      '品目の寸法（L x W）': { key: 'item_dimensions', type: 'dimensions' },
-      '商品本体サイズ': { key: 'item_dimensions', type: 'dimensions' },
+      '品目の寸法（L x W）': { key: 'item_length_width', type: 'dimensions' },
+      '品目の表示寸法': { key: 'item_display_dimensions', type: 'dimensions' },
       'カラー': { key: 'color', type: 'text' },
-      'メーカー希望小売価格・定価': { key: 'list_price', type: 'list_price' }
+      'メーカー希望小売価格・定価': { key: 'list_price', type: 'list_price' },
+      '危険物規制': { key: 'supplier_declared_dg_hz_regulation', type: 'value' }
     };
   }
 
@@ -189,6 +189,13 @@ class ListingSheetService {
 
     if (bulletPoints.length > 0) {
       attrs.bullet_point = bulletPoints;
+    }
+
+    if (!attrs.is_exclusive_product) {
+      attrs.is_exclusive_product = [{ value: 'Yes', marketplace_id: mp }];
+    }
+    if (!attrs.condition_type) {
+      attrs.condition_type = [{ value: 'new_new', marketplace_id: mp }];
     }
 
     return attrs;
