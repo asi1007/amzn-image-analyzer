@@ -17,6 +17,7 @@ class ListingSheetService {
       '商品名': { key: 'item_name', type: 'text' },
       'ブランド名': { key: 'brand', type: 'text' },
       '商品説明': { key: 'product_description', type: 'text' },
+      '商品説明文': { key: 'product_description', type: 'text' },
       '箇条書き1': { key: 'bullet_point', type: 'bullet' },
       '箇条書き2': { key: 'bullet_point', type: 'bullet' },
       '箇条書き3': { key: 'bullet_point', type: 'bullet' },
@@ -28,14 +29,15 @@ class ListingSheetService {
       'EAN/JAN': { key: 'externally_assigned_product_identifier', type: 'ean' },
       'メーカー名': { key: 'manufacturer', type: 'text' },
       '原産国': { key: 'country_of_origin', type: 'value' },
-'独占販売製品': { key: 'is_exclusive', type: 'value' },
       'ブラウズカテゴリ': { key: 'recommended_browse_nodes', type: 'value' },
       'パッケージ内に含まれる商品の数': { key: 'number_of_items', type: 'number' },
-      'パッケージの重さ': { key: 'item_package_weight', type: 'unit' },
-      '商品の状態': { key: 'item_condition', type: 'value' },
+      'パッケージの重さ': { key: 'item_package_weight', type: 'weight' },
       'パッケージ寸法': { key: 'item_package_dimensions', type: 'dimensions' },
       '品目の寸法（L x W）': { key: 'item_dimensions', type: 'dimensions' },
-      '電池本体、電池が必要な商品': { key: 'batteries_required', type: 'value' }
+      '商品本体サイズ': { key: 'item_dimensions', type: 'dimensions' },
+      'カラー': { key: 'color', type: 'text' },
+      'メーカー希望小売価格・定価': { key: 'list_price', type: 'list_price' },
+      '危険物規制': { key: 'ghs_classification_class', type: 'value' }
     };
   }
 
@@ -152,11 +154,36 @@ class ListingSheetService {
         case 'ean':
           attrs[mapping.key] = [{ type: 'ean', value: strValue, marketplace_id: mp }];
           break;
-        case 'unit':
-          attrs[mapping.key] = [{ value: strValue, marketplace_id: mp }];
+        case 'weight':
+          attrs[mapping.key] = [{
+            unit: 'grams',
+            value: Number(value),
+            marketplace_id: mp
+          }];
           break;
         case 'dimensions':
-          attrs[mapping.key] = [{ value: strValue, marketplace_id: mp }];
+          const parts = strValue.split(/[xX×]/);
+          if (parts.length >= 3) {
+            attrs[mapping.key] = [{
+              length: { unit: 'centimeters', value: Number(parts[0].trim()) },
+              width: { unit: 'centimeters', value: Number(parts[1].trim()) },
+              height: { unit: 'centimeters', value: Number(parts[2].trim()) },
+              marketplace_id: mp
+            }];
+          } else if (parts.length === 2) {
+            attrs[mapping.key] = [{
+              length: { unit: 'centimeters', value: Number(parts[0].trim()) },
+              width: { unit: 'centimeters', value: Number(parts[1].trim()) },
+              marketplace_id: mp
+            }];
+          }
+          break;
+        case 'list_price':
+          attrs[mapping.key] = [{
+            currency: 'JPY',
+            value_with_tax: Number(value),
+            marketplace_id: mp
+          }];
           break;
       }
     }
@@ -164,6 +191,9 @@ class ListingSheetService {
     if (bulletPoints.length > 0) {
       attrs.bullet_point = bulletPoints;
     }
+
+    attrs.is_exclusive = [{ value: 'Yes', marketplace_id: mp }];
+    attrs.item_condition = [{ value: 'new_new', marketplace_id: mp }];
 
     return attrs;
   }
