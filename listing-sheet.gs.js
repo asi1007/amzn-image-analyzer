@@ -31,9 +31,12 @@ class ListingSheetService {
       'ブラウズカテゴリ': { key: 'recommended_browse_nodes', type: 'value' },
       'パッケージ内に含まれる商品の数': { key: 'number_of_items', type: 'number' },
       'パッケージの重さ': { key: 'item_package_weight', type: 'weight' },
-      'パッケージ寸法': { key: 'item_package_dimensions', type: 'dimensions' },
-      '品目の寸法（L x W）': { key: 'item_length_width', type: 'dimensions' },
-      '品目の表示寸法': { key: 'item_display_dimensions', type: 'dimensions' },
+      'パッケージ寸法（長さ）': { key: 'item_package_dimensions', type: 'dim_part', field: 'length' },
+      'パッケージ寸法（幅）': { key: 'item_package_dimensions', type: 'dim_part', field: 'width' },
+      'パッケージ寸法（高さ）': { key: 'item_package_dimensions', type: 'dim_part', field: 'height' },
+      '品目の寸法（長さ）': { key: 'item_length_width', type: 'dim_part', field: 'length' },
+      '品目の寸法（幅）': { key: 'item_length_width', type: 'dim_part', field: 'width' },
+      '品目の寸法（高さ）': { key: 'item_length_width', type: 'dim_part', field: 'height' },
       'カラー': { key: 'color', type: 'text' },
       'メーカー希望小売価格・定価': { key: 'list_price', type: 'list_price' },
       '危険物規制': { key: 'supplier_declared_dg_hz_regulation', type: 'value' }
@@ -160,26 +163,14 @@ class ListingSheetService {
             marketplace_id: mp
           }];
           break;
-        case 'dimensions':
-          Logger.log(`[Dimensions] key=${mapping.key}, raw="${strValue}"`);
-          const parts = strValue.split(/[xX×ｘＸ\*\s]+/);
-          Logger.log(`[Dimensions] parts=${JSON.stringify(parts)}`);
-          if (parts.length >= 3) {
-            attrs[mapping.key] = [{
-              length: { unit: 'centimeters', value: parseFloat(parts[0]) || 0 },
-              width: { unit: 'centimeters', value: parseFloat(parts[1]) || 0 },
-              height: { unit: 'centimeters', value: parseFloat(parts[2]) || 0 },
-              marketplace_id: mp
-            }];
-          } else if (parts.length === 2) {
-            attrs[mapping.key] = [{
-              length: { unit: 'centimeters', value: parseFloat(parts[0]) || 0 },
-              width: { unit: 'centimeters', value: parseFloat(parts[1]) || 0 },
-              marketplace_id: mp
-            }];
-          } else {
-            Logger.log(`[Dimensions] パース失敗: "${strValue}"`);
+        case 'dim_part':
+          if (!attrs[mapping.key]) {
+            attrs[mapping.key] = [{ marketplace_id: mp }];
           }
+          attrs[mapping.key][0][mapping.field] = {
+            unit: 'centimeters',
+            value: parseFloat(value) || 0
+          };
           break;
         case 'list_price':
           attrs[mapping.key] = [{
