@@ -36,9 +36,12 @@ class SearchProductTypesUseCase {
   execute(keyword) {
     if (!keyword) {
       const sheet = this.listingSheetService.getSheet();
-      keyword = sheet.getRange(this.listingSheetService.rows.productType, this.listingSheetService.valueCol).getValue();
+      const row = this.listingSheetService.findRow(sheet, '商品タイプ');
+      if (row) {
+        keyword = sheet.getRange(row, this.listingSheetService.valueCol).getValue();
+      }
       if (!keyword) {
-        throw new Error('出品登録シートのB2に検索キーワードを入力してください');
+        throw new Error('「商品タイプ」行のB列に検索キーワードを入力してください');
       }
     }
 
@@ -58,7 +61,8 @@ class GenerateListingDataUseCase {
 
   execute() {
     const sheet = this.listingSheetService.getSheet();
-    const lastRow = this.listingSheetService.rows.status;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
     const prompts = sheet.getRange(2, this.promptCol, lastRow - 1, 1).getValues();
     let count = 0;
 

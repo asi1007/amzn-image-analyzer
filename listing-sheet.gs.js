@@ -3,27 +3,40 @@ class ListingSheetService {
     this.spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     this.sheetName = '出品登録';
     this.marketplaceId = 'A1VC38T7YXB528';
-    this.rows = {
-      productType: 2,
-      itemName: 3,
-      brand: 4,
-      description: 5,
-      bullet1: 6,
-      bullet2: 7,
-      bullet3: 8,
-      bullet4: 9,
-      bullet5: 10,
-      keyword: 11,
-      price: 12,
-      condition: 13,
-      externalId: 14,
-      sku: 15,
-      status: 16
-    };
     this.labelCol = 1;
     this.valueCol = 2;
     this.promptCol = 3;
-    this.extractedCol = 4;
+    this.extractedCol = 5;
+    this.reservedLabels = {
+      url: 'URL',
+      productType: '商品タイプ',
+      sku: 'SKU',
+      status: '登録ステータス'
+    };
+    this.attributeMap = {
+      '商品名': { key: 'item_name', type: 'text' },
+      'ブランド名': { key: 'brand', type: 'text' },
+      '商品説明': { key: 'product_description', type: 'text' },
+      '箇条書き1': { key: 'bullet_point', type: 'bullet' },
+      '箇条書き2': { key: 'bullet_point', type: 'bullet' },
+      '箇条書き3': { key: 'bullet_point', type: 'bullet' },
+      '箇条書き4': { key: 'bullet_point', type: 'bullet' },
+      '箇条書き5': { key: 'bullet_point', type: 'bullet' },
+      '検索キーワード': { key: 'generic_keyword', type: 'value' },
+      '販売価格': { key: 'purchasable_offer', type: 'price' },
+      'コンディション': { key: 'condition_type', type: 'value' },
+      'EAN/JAN': { key: 'externally_assigned_product_identifier', type: 'ean' },
+      'メーカー名': { key: 'manufacturer', type: 'text' },
+      '原産国': { key: 'country_of_origin', type: 'value' },
+'独占販売製品': { key: 'is_exclusive', type: 'value' },
+      'ブラウズカテゴリ': { key: 'recommended_browse_nodes', type: 'value' },
+      'パッケージ内に含まれる商品の数': { key: 'number_of_items', type: 'number' },
+      'パッケージの重さ': { key: 'item_package_weight', type: 'unit' },
+      '商品の状態': { key: 'item_condition', type: 'value' },
+      'パッケージ寸法': { key: 'item_package_dimensions', type: 'dimensions' },
+      '品目の寸法（L x W）': { key: 'item_dimensions', type: 'dimensions' },
+      '電池本体、電池が必要な商品': { key: 'batteries_required', type: 'value' }
+    };
   }
 
   getSheet() {
@@ -50,7 +63,8 @@ class ListingSheetService {
   }
 
   getLabels(sheet) {
-    const lastRow = this.rows.status;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return [];
     return sheet.getRange(2, this.labelCol, lastRow - 1, 1).getValues();
   }
 
@@ -64,94 +78,108 @@ class ListingSheetService {
     return `SKU-${timestamp}`;
   }
 
+  findRow(sheet, labelName) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return null;
+    const labels = sheet.getRange(2, this.labelCol, lastRow - 1, 1).getValues();
+    for (let i = 0; i < labels.length; i++) {
+      if (labels[i][0] === labelName) return i + 2;
+    }
+    return null;
+  }
+
   getListingData(sheet) {
-    const lastRow = Math.max(this.rows.externalId, sheet.getLastRow());
-    const values = sheet.getRange(1, this.valueCol, lastRow, 1).getValues();
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) throw new Error('データがありません');
 
-    const getValue = (row) => values[row - 1][0];
+    const labels = sheet.getRange(2, this.labelCol, lastRow - 1, 1).getValues();
+    const values = sheet.getRange(2, this.valueCol, lastRow - 1, 1).getValues();
 
-    const productType = getValue(this.rows.productType);
+    const data = {};
+    for (let i = 0; i < labels.length; i++) {
+      const label = String(labels[i][0]).trim();
+      const value = values[i][0];
+      if (label && value !== '') {
+        data[label] = value;
+      }
+    }
+
+    const productType = data[this.reservedLabels.productType];
     if (!productType) {
       throw new Error('商品タイプが未入力です');
     }
 
-    const sku = getValue(this.rows.sku) || this.generateSku();
-
-    const bulletPoints = [
-      getValue(this.rows.bullet1),
-      getValue(this.rows.bullet2),
-      getValue(this.rows.bullet3),
-      getValue(this.rows.bullet4),
-      getValue(this.rows.bullet5)
-    ].filter(b => b !== '');
+    const sku = data[this.reservedLabels.sku] || this.generateSku();
 
     return {
       sku: String(sku),
       productType: String(productType),
-      itemName: getValue(this.rows.itemName),
-      brand: getValue(this.rows.brand),
-      description: getValue(this.rows.description),
-      bulletPoints: bulletPoints,
-      keyword: getValue(this.rows.keyword),
-      price: getValue(this.rows.price),
-      condition: getValue(this.rows.condition) || 'new_new',
-      externalId: getValue(this.rows.externalId)
+      labelValueMap: data
     };
   }
 
   buildAttributes(data) {
     const mp = this.marketplaceId;
     const attrs = {};
+    const bulletPoints = [];
 
-    if (data.itemName) {
-      attrs.item_name = [{ value: data.itemName, language_tag: 'ja_JP', marketplace_id: mp }];
+    for (const [label, value] of Object.entries(data.labelValueMap)) {
+      const mapping = this.attributeMap[label];
+      if (!mapping) continue;
+
+      const strValue = String(value);
+
+      switch (mapping.type) {
+        case 'text':
+          attrs[mapping.key] = [{ value: strValue, language_tag: 'ja_JP', marketplace_id: mp }];
+          break;
+        case 'bullet':
+          bulletPoints.push({ value: strValue, language_tag: 'ja_JP', marketplace_id: mp });
+          break;
+        case 'value':
+          attrs[mapping.key] = [{ value: strValue, marketplace_id: mp }];
+          break;
+        case 'number':
+          attrs[mapping.key] = [{ value: Number(value), marketplace_id: mp }];
+          break;
+        case 'price':
+          attrs[mapping.key] = [{
+            currency: 'JPY',
+            our_price: [{ schedule: [{ value_with_tax: Number(value) }] }],
+            marketplace_id: mp
+          }];
+          break;
+        case 'ean':
+          attrs[mapping.key] = [{ type: 'ean', value: strValue, marketplace_id: mp }];
+          break;
+        case 'unit':
+          attrs[mapping.key] = [{ value: strValue, marketplace_id: mp }];
+          break;
+        case 'dimensions':
+          attrs[mapping.key] = [{ value: strValue, marketplace_id: mp }];
+          break;
+      }
     }
 
-    if (data.brand) {
-      attrs.brand = [{ value: data.brand, language_tag: 'ja_JP', marketplace_id: mp }];
-    }
-
-    if (data.description) {
-      attrs.product_description = [{ value: data.description, language_tag: 'ja_JP', marketplace_id: mp }];
-    }
-
-    if (data.bulletPoints.length > 0) {
-      attrs.bullet_point = data.bulletPoints.map(bp => ({
-        value: bp, language_tag: 'ja_JP', marketplace_id: mp
-      }));
-    }
-
-    if (data.keyword) {
-      attrs.generic_keyword = [{ value: data.keyword, marketplace_id: mp }];
-    }
-
-    if (data.price) {
-      attrs.purchasable_offer = [{
-        currency: 'JPY',
-        our_price: [{ schedule: [{ value_with_tax: data.price }] }],
-        marketplace_id: mp
-      }];
-    }
-
-    if (data.condition) {
-      attrs.condition_type = [{ value: data.condition, marketplace_id: mp }];
-    }
-
-    if (data.externalId) {
-      attrs.externally_assigned_product_identifier = [{
-        type: 'ean', value: String(data.externalId), marketplace_id: mp
-      }];
+    if (bulletPoints.length > 0) {
+      attrs.bullet_point = bulletPoints;
     }
 
     return attrs;
   }
 
   writeSku(sheet, sku) {
-    sheet.getRange(this.rows.sku, this.valueCol).setValue(sku);
+    const row = this.findRow(sheet, this.reservedLabels.sku);
+    if (row) {
+      sheet.getRange(row, this.valueCol).setValue(sku);
+    }
   }
 
   writeStatus(sheet, status) {
-    sheet.getRange(this.rows.status, this.valueCol).setValue(status);
+    const row = this.findRow(sheet, this.reservedLabels.status);
+    if (row) {
+      sheet.getRange(row, this.valueCol).setValue(status);
+    }
   }
 
   writeProductTypes(results) {
