@@ -161,20 +161,24 @@ class ListingSheetService {
           }];
           break;
         case 'dimensions':
-          const parts = strValue.split(/[xX×]/);
+          Logger.log(`[Dimensions] key=${mapping.key}, raw="${strValue}"`);
+          const parts = strValue.split(/[xX×ｘＸ\*\s]+/);
+          Logger.log(`[Dimensions] parts=${JSON.stringify(parts)}`);
           if (parts.length >= 3) {
             attrs[mapping.key] = [{
-              length: { unit: 'centimeters', value: Number(parts[0].trim()) },
-              width: { unit: 'centimeters', value: Number(parts[1].trim()) },
-              height: { unit: 'centimeters', value: Number(parts[2].trim()) },
+              length: { unit: 'centimeters', value: parseFloat(parts[0]) || 0 },
+              width: { unit: 'centimeters', value: parseFloat(parts[1]) || 0 },
+              height: { unit: 'centimeters', value: parseFloat(parts[2]) || 0 },
               marketplace_id: mp
             }];
           } else if (parts.length === 2) {
             attrs[mapping.key] = [{
-              length: { unit: 'centimeters', value: Number(parts[0].trim()) },
-              width: { unit: 'centimeters', value: Number(parts[1].trim()) },
+              length: { unit: 'centimeters', value: parseFloat(parts[0]) || 0 },
+              width: { unit: 'centimeters', value: parseFloat(parts[1]) || 0 },
               marketplace_id: mp
             }];
+          } else {
+            Logger.log(`[Dimensions] パース失敗: "${strValue}"`);
           }
           break;
         case 'list_price':
