@@ -180,9 +180,24 @@ function ShowProductTypeAttributes() {
   if (!productType) throw new Error('商品タイプが未入力です');
 
   const definition = productTypeService.getProductTypeDefinition(productType);
-  const schema = definition.schema;
-  const schemaObj = JSON.parse(JSON.stringify(schema));
+  Logger.log('Definition keys: ' + Object.keys(definition).join(', '));
+
+  let schemaObj = definition.schema || {};
+  if (schemaObj.link) {
+    const schemaUrl = schemaObj.link.resource;
+    Logger.log('Schema URL: ' + schemaUrl);
+    const accessToken = authService.getAccessToken();
+    const schemaResponse = UrlFetchApp.fetch(schemaUrl, {
+      method: 'get',
+      headers: { 'x-amz-access-token': accessToken },
+      muteHttpExceptions: true
+    });
+    schemaObj = JSON.parse(schemaResponse.getContentText());
+  }
+
+  Logger.log('Schema top keys: ' + Object.keys(schemaObj).join(', '));
   const properties = schemaObj.properties || {};
+  Logger.log('Properties count: ' + Object.keys(properties).length);
 
   const rows = [];
   for (const [key, prop] of Object.entries(properties)) {
