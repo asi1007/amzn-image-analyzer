@@ -132,7 +132,7 @@ class ExtractPageDataUseCase {
 
       const row = i + 2;
       try {
-        const prompt = `以下はある商品ページの内容です:\n${pageContent}\n\n上記の内容から「${label}」に該当する情報を抽出してください。該当する情報のみを簡潔に返してください。見つからない場合は空文字を返してください。`;
+        const prompt = `これはamazonの商品ページです。下記データから「${label}」を抽出してください。該当する情報のみを簡潔に返してください。見つからない場合は空文字を返してください。\n\n${pageContent}`;
         const result = this.aiService.generateText(prompt);
         this.listingSheetService.writeExtracted(sheet, row, result.trim());
         count++;
