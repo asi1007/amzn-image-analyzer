@@ -109,6 +109,48 @@ class GenerateListingDataUseCase {
   }
 }
 
+class ExtractPageDataUseCase {
+  constructor() {
+    this.aiService = new ChatGptService();
+    this.listingSheetService = new ListingSheetService();
+  }
+
+  execute() {
+    const sheet = this.listingSheetService.getSheet();
+    const url = this.listingSheetService.getReferenceUrl(sheet);
+    if (!url) {
+      throw new Error('A1にURLが入力されていません');
+    }
+
+    const pageContent = this.listingSheetService.fetchPageContent(url);
+    const labels = this.listingSheetService.getLabels(sheet);
+    let count = 0;
+
+    for (let i = 0; i < labels.length; i++) {
+      const label = labels[i][0];
+      if (!label) continue;
+
+      const row = i + 2;
+      try {
+        const prompt = `以下はある商品ページの内容です:\n${pageContent}\n\n上記の内容から「${label}」に該当する情報を抽出してください。該当する情報のみを簡潔に返してください。見つからない場合は空文字を返してください。`;
+        const result = this.aiService.generateText(prompt);
+        this.listingSheetService.writeExtracted(sheet, row, result.trim());
+        count++;
+      } catch (error) {
+        Logger.log(`行${row}の抽出に失敗: ${error.message}`);
+        this.listingSheetService.writeExtracted(sheet, row, `エラー: ${error.message}`);
+      }
+    }
+
+    Logger.log(`${count}件のデータを抽出しました`);
+  }
+}
+
+function ExtractPageData() {
+  const useCase = new ExtractPageDataUseCase();
+  useCase.execute();
+}
+
 function GenerateListingData() {
   const useCase = new GenerateListingDataUseCase();
   useCase.execute();

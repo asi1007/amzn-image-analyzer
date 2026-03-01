@@ -22,6 +22,8 @@ class ListingSheetService {
     };
     this.labelCol = 1;
     this.valueCol = 2;
+    this.promptCol = 3;
+    this.extractedCol = 4;
   }
 
   getSheet() {
@@ -30,6 +32,30 @@ class ListingSheetService {
       throw new Error(`「${this.sheetName}」シートが見つかりません`);
     }
     return sheet;
+  }
+
+  getReferenceUrl(sheet) {
+    return sheet.getRange(1, this.labelCol).getValue();
+  }
+
+  fetchPageContent(url) {
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const html = response.getContentText();
+    return html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+               .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+               .replace(/<[^>]+>/g, ' ')
+               .replace(/\s+/g, ' ')
+               .trim()
+               .substring(0, 5000);
+  }
+
+  getLabels(sheet) {
+    const lastRow = this.rows.status;
+    return sheet.getRange(2, this.labelCol, lastRow - 1, 1).getValues();
+  }
+
+  writeExtracted(sheet, row, value) {
+    sheet.getRange(row, this.extractedCol).setValue(value);
   }
 
   generateSku() {
