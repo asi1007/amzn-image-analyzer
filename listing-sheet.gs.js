@@ -192,6 +192,9 @@ class ListingSheetService {
     if (!attrs.condition_type) {
       attrs.condition_type = [{ value: 'new_new', marketplace_id: mp }];
     }
+    if (!attrs.fulfillment_availability) {
+      attrs.fulfillment_availability = [{ fulfillment_channel_code: 'DEFAULT', marketplace_id: mp }];
+    }
 
     return attrs;
   }
