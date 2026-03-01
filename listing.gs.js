@@ -70,7 +70,8 @@ class GenerateListingDataUseCase {
 
       const row = i + 2;
       try {
-        const result = this.aiService.generateText(prompt);
+        const resolvedPrompt = this.resolveUrls(prompt);
+        const result = this.aiService.generateText(resolvedPrompt);
         sheet.getRange(row, this.listingSheetService.valueCol).setValue(result.trim());
         count++;
       } catch (error) {
@@ -80,6 +81,31 @@ class GenerateListingDataUseCase {
     }
 
     Logger.log(`${count}件のデータを生成しました`);
+  }
+
+  resolveUrls(prompt) {
+    const urlPattern = /https?:\/\/[^\s,)}\]]+/g;
+    const urls = prompt.match(urlPattern);
+    if (!urls) return prompt;
+
+    let resolved = prompt;
+    urls.forEach(url => {
+      try {
+        const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+        const html = response.getContentText();
+        const text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                         .replace(/<[^>]+>/g, ' ')
+                         .replace(/\s+/g, ' ')
+                         .trim();
+        const truncated = text.substring(0, 5000);
+        resolved = resolved.replace(url, `\n---以下は ${url} の内容---\n${truncated}\n---ここまで---\n`);
+      } catch (error) {
+        Logger.log(`URL取得失敗: ${url} - ${error.message}`);
+      }
+    });
+
+    return resolved;
   }
 }
 
