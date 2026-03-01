@@ -35,12 +35,10 @@ class SearchProductTypesUseCase {
 
   execute(keyword) {
     if (!keyword) {
-      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('商品タイプ検索');
-      if (sheet) {
-        keyword = sheet.getRange('A2').getValue();
-      }
+      const sheet = this.listingSheetService.getSheet();
+      keyword = sheet.getRange(this.listingSheetService.rows.productType, this.listingSheetService.valueCol).getValue();
       if (!keyword) {
-        throw new Error('検索キーワードが指定されていません');
+        throw new Error('出品登録シートのB2に検索キーワードを入力してください');
       }
     }
 
