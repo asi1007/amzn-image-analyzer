@@ -34,12 +34,17 @@ class ListingSheetService {
       'パッケージ寸法（長さ）': { key: 'item_package_dimensions', type: 'dim_part', field: 'length' },
       'パッケージ寸法（幅）': { key: 'item_package_dimensions', type: 'dim_part', field: 'width' },
       'パッケージ寸法（高さ）': { key: 'item_package_dimensions', type: 'dim_part', field: 'height' },
-      '品目の寸法（長さ）': { key: 'item_length_width', type: 'dim_part', field: 'length' },
-      '品目の寸法（幅）': { key: 'item_length_width', type: 'dim_part', field: 'width' },
-      '品目の寸法（高さ）': { key: 'item_length_width', type: 'dim_part', field: 'height' },
+      '品目の寸法（長さ）': { key: 'item_dimensions', type: 'dim_part', field: 'length' },
+      '品目の寸法（幅）': { key: 'item_dimensions', type: 'dim_part', field: 'width' },
+      '品目の寸法（高さ）': { key: 'item_dimensions', type: 'dim_part', field: 'height' },
       'カラー': { key: 'color', type: 'text' },
       'メーカー希望小売価格・定価': { key: 'list_price', type: 'list_price' },
-      '危険物規制': { key: 'supplier_declared_dg_hz_regulation', type: 'value' }
+      '危険物規制': { key: 'supplier_declared_dg_hz_regulation', type: 'value' },
+      'ユニット数': { key: 'unit_count', type: 'unit_count' },
+      '輸入種別': { key: 'import_designation', type: 'value' },
+      '品番・型番': { key: 'part_number', type: 'text' },
+      '型番': { key: 'model_number', type: 'text' },
+      '同梱商品': { key: 'included_components', type: 'text' }
     };
   }
 
@@ -179,6 +184,16 @@ class ListingSheetService {
             marketplace_id: mp
           }];
           break;
+        case 'unit_count':
+          const unitParts = strValue.split(/[,、\s]+/);
+          const unitValue = parseFloat(unitParts[0]) || 1;
+          const unitType = unitParts[1] || '個';
+          attrs[mapping.key] = [{
+            value: unitValue,
+            unit: unitType,
+            marketplace_id: mp
+          }];
+          break;
       }
     }
 
@@ -210,6 +225,59 @@ class ListingSheetService {
     const row = this.findRow(sheet, this.reservedLabels.status);
     if (row) {
       sheet.getRange(row, this.valueCol).setValue(status);
+    }
+  }
+
+  getExistingLabels(sheet) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return [];
+    return sheet.getRange(2, this.labelCol, lastRow - 1, 1).getValues().map(r => String(r[0]).trim());
+  }
+
+  getAutoSetKeys() {
+    return ['condition_type', 'is_exclusive_product', 'fulfillment_availability'];
+  }
+
+  getReverseAttributeMap() {
+    const reverse = {};
+    for (const [label, mapping] of Object.entries(this.attributeMap)) {
+      if (!reverse[mapping.key]) {
+        reverse[mapping.key] = label;
+      }
+    }
+    return reverse;
+  }
+
+  getExistingApiKeys(existingLabels) {
+    const keys = new Set();
+    for (const label of existingLabels) {
+      const mapping = this.attributeMap[label];
+      if (mapping) keys.add(mapping.key);
+    }
+    for (const reserved of Object.values(this.reservedLabels)) {
+      keys.add(reserved);
+    }
+    for (const autoKey of this.getAutoSetKeys()) {
+      keys.add(autoKey);
+    }
+    return keys;
+  }
+
+  addMissingLabels(sheet, labels) {
+    if (labels.length === 0) return;
+    const lastRow = sheet.getLastRow();
+    const statusRow = this.findRow(sheet, this.reservedLabels.status);
+
+    if (statusRow) {
+      sheet.insertRowsBefore(statusRow, labels.length);
+      for (let i = 0; i < labels.length; i++) {
+        sheet.getRange(statusRow + i, this.labelCol).setValue(labels[i]);
+      }
+    } else {
+      const startRow = lastRow + 1;
+      for (let i = 0; i < labels.length; i++) {
+        sheet.getRange(startRow + i, this.labelCol).setValue(labels[i]);
+      }
     }
   }
 

@@ -168,6 +168,52 @@ function SearchProductTypes() {
   useCase.execute();
 }
 
+function AddMissingRequiredLabels() {
+  const authService = new SpApiAuthService();
+  const productTypeService = new SpApiProductTypeService(authService);
+  const listingSheetService = new ListingSheetService();
+
+  const sheet = listingSheetService.getSheet();
+  const row = listingSheetService.findRow(sheet, '商品タイプ');
+  if (!row) throw new Error('商品タイプが見つかりません');
+  const productType = sheet.getRange(row, listingSheetService.valueCol).getValue();
+  if (!productType) throw new Error('商品タイプが未入力です');
+
+  const definition = productTypeService.getProductTypeDefinition(productType);
+  let schemaObj = definition.schema || {};
+  if (schemaObj.link) {
+    const schemaUrl = schemaObj.link.resource;
+    const schemaResponse = UrlFetchApp.fetch(schemaUrl, { method: 'get', muteHttpExceptions: true });
+    schemaObj = JSON.parse(schemaResponse.getContentText());
+  }
+
+  const requiredKeys = schemaObj.required || [];
+  const properties = schemaObj.properties || {};
+  const existingLabels = listingSheetService.getExistingLabels(sheet);
+  const existingApiKeys = listingSheetService.getExistingApiKeys(existingLabels);
+  const reverseMap = listingSheetService.getReverseAttributeMap();
+
+  const missingLabels = [];
+  for (const key of requiredKeys) {
+    if (existingApiKeys.has(key)) continue;
+
+    const label = reverseMap[key] || (properties[key] && properties[key].title) || key;
+    missingLabels.push(label);
+
+    if (!reverseMap[key] && properties[key]) {
+      listingSheetService.attributeMap[label] = { key: key, type: 'text' };
+    }
+  }
+
+  if (missingLabels.length === 0) {
+    Logger.log('不足している必須項目はありません');
+    return;
+  }
+
+  listingSheetService.addMissingLabels(sheet, missingLabels);
+  Logger.log(`${missingLabels.length}件の必須項目を追加しました: ${missingLabels.join(', ')}`);
+}
+
 function ShowProductTypeAttributes() {
   const authService = new SpApiAuthService();
   const productTypeService = new SpApiProductTypeService(authService);
