@@ -8,6 +8,8 @@ class CreateListingUseCase {
   execute() {
     const sheet = this.listingSheetService.getSheet();
 
+    this.listingSheetService.fillMissingApiKeys(sheet);
+
     const data = this.listingSheetService.getListingData(sheet);
 
     this.listingSheetService.writeSku(sheet, data.sku);
@@ -193,9 +195,13 @@ function AddMissingRequiredLabels() {
   const existingApiKeys = listingSheetService.getExistingApiKeys(sheet, existingLabels);
   const reverseMap = listingSheetService.getReverseAttributeMap();
 
+  listingSheetService.fillMissingApiKeys(sheet);
+
+  const updatedApiKeys = listingSheetService.getExistingApiKeys(sheet, existingLabels);
+
   const missingItems = [];
   for (const key of requiredKeys) {
-    if (existingApiKeys.has(key)) continue;
+    if (updatedApiKeys.has(key)) continue;
 
     const label = reverseMap[key] || (properties[key] && properties[key].title) || key;
     missingItems.push({ label: label, apiKey: key });

@@ -198,10 +198,16 @@ class ListingSheetService {
         case 'unit_count':
           const unitParts = strValue.split(/[,、\s]+/);
           const unitValue = parseFloat(unitParts[0]) || 1;
-          const unitType = unitParts[1] || '個';
+          const unitTypeMap = {
+            '個': 'Count', '枚': 'Count', '本': 'Count', '組': 'Count', 'セット': 'Count',
+            'グラム': 'Gram', 'g': 'Gram', 'ミリリットル': 'Milliliter', 'ml': 'Milliliter',
+            'オンス': 'Ounce', 'oz': 'Ounce'
+          };
+          const rawType = unitParts[1] || '個';
+          const unitType = unitTypeMap[rawType] || rawType;
           attrs[mapping.key] = [{
             value: unitValue,
-            unit: unitType,
+            type: unitType,
             marketplace_id: mp
           }];
           break;
@@ -236,6 +242,30 @@ class ListingSheetService {
     const row = this.findRow(sheet, this.reservedLabels.status);
     if (row) {
       sheet.getRange(row, this.valueCol).setValue(status);
+    }
+  }
+
+  fillMissingApiKeys(sheet) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+    const labels = sheet.getRange(2, this.labelCol, lastRow - 1, 1).getValues();
+    const apiKeys = sheet.getRange(2, this.apiKeyCol, lastRow - 1, 1).getValues();
+    let filled = 0;
+
+    for (let i = 0; i < labels.length; i++) {
+      const label = String(labels[i][0]).trim();
+      const existingKey = String(apiKeys[i][0]).trim();
+      if (!label || existingKey) continue;
+
+      const mapping = this.attributeMap[label];
+      if (mapping) {
+        sheet.getRange(i + 2, this.apiKeyCol).setValue(mapping.key);
+        filled++;
+      }
+    }
+
+    if (filled > 0) {
+      Logger.log(`${filled}件の既存行にAPIキーを補完しました`);
     }
   }
 
