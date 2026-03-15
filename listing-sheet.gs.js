@@ -6,6 +6,7 @@ class ListingSheetService {
     this.labelCol = 1;
     this.valueCol = 2;
     this.promptCol = 3;
+    this.apiKeyCol = 4;
     this.extractedCol = 5;
     this.reservedLabels = {
       url: 'URL',
@@ -103,13 +104,19 @@ class ListingSheetService {
 
     const labels = sheet.getRange(2, this.labelCol, lastRow - 1, 1).getValues();
     const values = sheet.getRange(2, this.valueCol, lastRow - 1, 1).getValues();
+    const apiKeys = sheet.getRange(2, this.apiKeyCol, lastRow - 1, 1).getValues();
 
     const data = {};
+    const apiKeyMap = {};
     for (let i = 0; i < labels.length; i++) {
       const label = String(labels[i][0]).trim();
       const value = values[i][0];
+      const apiKey = String(apiKeys[i][0]).trim();
       if (label && value !== '') {
         data[label] = value;
+      }
+      if (label && apiKey) {
+        apiKeyMap[label] = apiKey;
       }
     }
 
@@ -123,7 +130,8 @@ class ListingSheetService {
     return {
       sku: String(sku),
       productType: String(productType),
-      labelValueMap: data
+      labelValueMap: data,
+      apiKeyMap: apiKeyMap
     };
   }
 
@@ -133,7 +141,10 @@ class ListingSheetService {
     const bulletPoints = [];
 
     for (const [label, value] of Object.entries(data.labelValueMap)) {
-      const mapping = this.attributeMap[label];
+      let mapping = this.attributeMap[label];
+      if (!mapping && data.apiKeyMap && data.apiKeyMap[label]) {
+        mapping = { key: data.apiKeyMap[label], type: 'text' };
+      }
       if (!mapping) continue;
 
       const strValue = String(value);
@@ -248,8 +259,16 @@ class ListingSheetService {
     return reverse;
   }
 
-  getExistingApiKeys(existingLabels) {
+  getExistingApiKeys(sheet, existingLabels) {
     const keys = new Set();
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const apiKeys = sheet.getRange(2, this.apiKeyCol, lastRow - 1, 1).getValues();
+      for (let i = 0; i < apiKeys.length; i++) {
+        const apiKey = String(apiKeys[i][0]).trim();
+        if (apiKey) keys.add(apiKey);
+      }
+    }
     for (const label of existingLabels) {
       const mapping = this.attributeMap[label];
       if (mapping) keys.add(mapping.key);
@@ -263,20 +282,22 @@ class ListingSheetService {
     return keys;
   }
 
-  addMissingLabels(sheet, labels) {
-    if (labels.length === 0) return;
-    const lastRow = sheet.getLastRow();
+  addMissingLabels(sheet, labelsWithKeys) {
+    if (labelsWithKeys.length === 0) return;
     const statusRow = this.findRow(sheet, this.reservedLabels.status);
 
     if (statusRow) {
-      sheet.insertRowsBefore(statusRow, labels.length);
-      for (let i = 0; i < labels.length; i++) {
-        sheet.getRange(statusRow + i, this.labelCol).setValue(labels[i]);
+      sheet.insertRowsBefore(statusRow, labelsWithKeys.length);
+      for (let i = 0; i < labelsWithKeys.length; i++) {
+        sheet.getRange(statusRow + i, this.labelCol).setValue(labelsWithKeys[i].label);
+        sheet.getRange(statusRow + i, this.apiKeyCol).setValue(labelsWithKeys[i].apiKey);
       }
     } else {
+      const lastRow = sheet.getLastRow();
       const startRow = lastRow + 1;
-      for (let i = 0; i < labels.length; i++) {
-        sheet.getRange(startRow + i, this.labelCol).setValue(labels[i]);
+      for (let i = 0; i < labelsWithKeys.length; i++) {
+        sheet.getRange(startRow + i, this.labelCol).setValue(labelsWithKeys[i].label);
+        sheet.getRange(startRow + i, this.apiKeyCol).setValue(labelsWithKeys[i].apiKey);
       }
     }
   }

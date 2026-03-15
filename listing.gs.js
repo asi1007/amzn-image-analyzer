@@ -190,28 +190,25 @@ function AddMissingRequiredLabels() {
   const requiredKeys = schemaObj.required || [];
   const properties = schemaObj.properties || {};
   const existingLabels = listingSheetService.getExistingLabels(sheet);
-  const existingApiKeys = listingSheetService.getExistingApiKeys(existingLabels);
+  const existingApiKeys = listingSheetService.getExistingApiKeys(sheet, existingLabels);
   const reverseMap = listingSheetService.getReverseAttributeMap();
 
-  const missingLabels = [];
+  const missingItems = [];
   for (const key of requiredKeys) {
     if (existingApiKeys.has(key)) continue;
 
     const label = reverseMap[key] || (properties[key] && properties[key].title) || key;
-    missingLabels.push(label);
-
-    if (!reverseMap[key] && properties[key]) {
-      listingSheetService.attributeMap[label] = { key: key, type: 'text' };
-    }
+    missingItems.push({ label: label, apiKey: key });
   }
 
-  if (missingLabels.length === 0) {
+  if (missingItems.length === 0) {
     Logger.log('不足している必須項目はありません');
     return;
   }
 
-  listingSheetService.addMissingLabels(sheet, missingLabels);
-  Logger.log(`${missingLabels.length}件の必須項目を追加しました: ${missingLabels.join(', ')}`);
+  listingSheetService.addMissingLabels(sheet, missingItems);
+  const addedLabels = missingItems.map(item => item.label).join(', ');
+  Logger.log(`${missingItems.length}件の必須項目を追加しました: ${addedLabels}`);
 }
 
 function ShowProductTypeAttributes() {
