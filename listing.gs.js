@@ -270,3 +270,53 @@ function ShowProductTypeAttributes() {
   }
   Logger.log(`${rows.length}件の属性を書き出しました`);
 }
+
+function DiagnoseAttributes() {
+  const authService = new SpApiAuthService();
+  const productTypeService = new SpApiProductTypeService(authService);
+  const listingSheetService = new ListingSheetService();
+
+  const sheet = listingSheetService.getSheet();
+  const row = listingSheetService.findRow(sheet, '商品タイプ');
+  if (!row) throw new Error('商品タイプが見つかりません');
+  const productType = sheet.getRange(row, listingSheetService.valueCol).getValue();
+  if (!productType) throw new Error('商品タイプが未入力です');
+
+  const definition = productTypeService.getProductTypeDefinition(productType);
+  let schemaObj = definition.schema || {};
+  if (schemaObj.link) {
+    const schemaUrl = schemaObj.link.resource;
+    const schemaResponse = UrlFetchApp.fetch(schemaUrl, { method: 'get', muteHttpExceptions: true });
+    schemaObj = JSON.parse(schemaResponse.getContentText());
+  }
+
+  const targetKeys = [
+    'model_number', 'part_number', 'import_designation',
+    'item_dimensions', 'unit_count', 'country_of_origin',
+    'included_components'
+  ];
+  const properties = schemaObj.properties || {};
+
+  for (const key of targetKeys) {
+    const prop = properties[key];
+    if (prop) {
+      Logger.log(`[Diagnose] ${key}: ${JSON.stringify(prop).substring(0, 1000)}`);
+    } else {
+      Logger.log(`[Diagnose] ${key}: この商品タイプには存在しません`);
+    }
+  }
+
+  const searchTitles = ['輸入', '寸法', 'dimension', 'import', '型番', 'model'];
+  const required = schemaObj.required || [];
+  for (const [key, prop] of Object.entries(properties)) {
+    const title = prop.title || '';
+    const desc = prop.description || '';
+    for (const term of searchTitles) {
+      if (title.includes(term) || desc.includes(term) || key.includes(term)) {
+        const isRequired = required.includes(key);
+        Logger.log(`[Search] ${key} (${isRequired ? '必須' : '任意'}): title="${title}" schema=${JSON.stringify(prop).substring(0, 800)}`);
+        break;
+      }
+    }
+  }
+}

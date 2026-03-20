@@ -35,17 +35,19 @@ class ListingSheetService {
       'パッケージ寸法（長さ）': { key: 'item_package_dimensions', type: 'dim_part', field: 'length' },
       'パッケージ寸法（幅）': { key: 'item_package_dimensions', type: 'dim_part', field: 'width' },
       'パッケージ寸法（高さ）': { key: 'item_package_dimensions', type: 'dim_part', field: 'height' },
-      '品目の寸法（長さ）': { key: 'item_dimensions', type: 'dim_part', field: 'length' },
-      '品目の寸法（幅）': { key: 'item_dimensions', type: 'dim_part', field: 'width' },
-      '品目の寸法（高さ）': { key: 'item_dimensions', type: 'dim_part', field: 'height' },
+      '品目の寸法（長さ）': { key: 'item_length_width_height', type: 'dim_part', field: 'length' },
+      '品目の寸法（幅）': { key: 'item_length_width_height', type: 'dim_part', field: 'width' },
+      '品目の寸法（高さ）': { key: 'item_length_width_height', type: 'dim_part', field: 'height' },
       'カラー': { key: 'color', type: 'text' },
       'メーカー希望小売価格・定価': { key: 'list_price', type: 'list_price' },
       '危険物規制': { key: 'supplier_declared_dg_hz_regulation', type: 'value' },
       'ユニット数': { key: 'unit_count', type: 'unit_count' },
-      '輸入種別': { key: 'import_designation', type: 'value' },
-      '品番・型番': { key: 'part_number', type: 'text' },
-      '型番': { key: 'model_number', type: 'text' },
-      '同梱商品': { key: 'included_components', type: 'text' }
+      '輸入種別': { key: 'distribution_designation', type: 'value' },
+      '品番・型番': { key: 'model_number', type: 'value' },
+      '型番': { key: 'model_name', type: 'text' },
+      'メーカー型番': { key: 'part_number', type: 'value' },
+      '同梱商品': { key: 'included_components', type: 'text' },
+      'サイズ': { key: 'size', type: 'text' }
     };
   }
 
@@ -139,6 +141,12 @@ class ListingSheetService {
     const mp = this.marketplaceId;
     const attrs = {};
     const bulletPoints = [];
+    const distributionDesignationMap = {
+      '輸入': 'parallel_import',
+      '並行輸入': 'parallel_import',
+      '並行輸入品': 'parallel_import',
+      '国内': 'jp_domestic'
+    };
 
     for (const [label, value] of Object.entries(data.labelValueMap)) {
       let mapping = this.attributeMap[label];
@@ -157,7 +165,11 @@ class ListingSheetService {
           bulletPoints.push({ value: strValue, language_tag: 'ja_JP', marketplace_id: mp });
           break;
         case 'value':
-          attrs[mapping.key] = [{ value: strValue, marketplace_id: mp }];
+          let resolvedValue = strValue;
+          if (mapping.key === 'distribution_designation' && distributionDesignationMap[strValue]) {
+            resolvedValue = distributionDesignationMap[strValue];
+          }
+          attrs[mapping.key] = [{ value: resolvedValue, marketplace_id: mp }];
           break;
         case 'number':
           attrs[mapping.key] = [{ value: Number(value), marketplace_id: mp }];
@@ -196,18 +208,13 @@ class ListingSheetService {
           }];
           break;
         case 'unit_count':
-          const unitParts = strValue.split(/[,、\s]+/);
-          const unitValue = parseFloat(unitParts[0]) || 1;
-          const unitTypeMap = {
-            '個': 'Count', '枚': 'Count', '本': 'Count', '組': 'Count', 'セット': 'Count',
-            'グラム': 'Gram', 'g': 'Gram', 'ミリリットル': 'Milliliter', 'ml': 'Milliliter',
-            'オンス': 'Ounce', 'oz': 'Ounce'
-          };
-          const rawType = unitParts[1] || '個';
-          const unitType = unitTypeMap[rawType] || rawType;
+          const unitMatch = strValue.match(/^(\d+\.?\d*)\s*(.*)$/);
+          const unitValue = unitMatch ? parseFloat(unitMatch[1]) : 1;
+          const rawType = unitMatch ? unitMatch[2].trim() : '個';
+          const unitType = rawType || '個';
           attrs[mapping.key] = [{
             value: unitValue,
-            type: unitType,
+            type: { language_tag: 'ja_JP', value: unitType },
             marketplace_id: mp
           }];
           break;
@@ -225,7 +232,13 @@ class ListingSheetService {
       attrs.condition_type = [{ value: 'new_new', marketplace_id: mp }];
     }
     if (!attrs.fulfillment_availability) {
-      attrs.fulfillment_availability = [{ fulfillment_channel_code: 'DEFAULT', marketplace_id: mp }];
+      attrs.fulfillment_availability = [{ fulfillment_channel_code: 'AMAZON_NA', marketplace_id: mp }];
+    }
+    if (!attrs.item_release_date) {
+      const releaseDate = new Date();
+      releaseDate.setMonth(releaseDate.getMonth() + 1);
+      const releaseDateStr = Utilities.formatDate(releaseDate, 'Asia/Tokyo', 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
+      attrs.item_release_date = [{ value: releaseDateStr, marketplace_id: mp }];
     }
 
     return attrs;
@@ -276,7 +289,7 @@ class ListingSheetService {
   }
 
   getAutoSetKeys() {
-    return ['condition_type', 'is_exclusive_product', 'fulfillment_availability'];
+    return ['condition_type', 'is_exclusive_product', 'fulfillment_availability', 'item_release_date'];
   }
 
   getReverseAttributeMap() {

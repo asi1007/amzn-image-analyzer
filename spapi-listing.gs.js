@@ -17,6 +17,9 @@ class SpApiListingService {
       attributes: attributes
     };
 
+    Logger.log('[SpApiListing] 送信属性キー: ' + Object.keys(attributes).join(', '));
+    Logger.log('[SpApiListing] 送信JSON: ' + JSON.stringify(body).substring(0, 3000));
+
     const options = {
       method: 'put',
       contentType: 'application/json',
