@@ -235,7 +235,7 @@ class ListingSheetService {
       attrs.condition_type = [{ value: 'new_new', marketplace_id: mp }];
     }
     if (!attrs.fulfillment_availability) {
-      attrs.fulfillment_availability = [{ fulfillment_channel_code: 'AMAZON_JP', marketplace_id: mp }];
+      attrs.fulfillment_availability = [{ fulfillment_channel_code: 'AMAZON_JP' }];
     }
     if (!attrs.street_date) {
       const releaseDate = new Date();
