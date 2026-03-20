@@ -17,9 +17,12 @@ class CreateListingUseCase {
     try {
       const attributes = this.listingSheetService.buildAttributes(data);
       const result = this.listingService.createListing(data.sku, data.productType, attributes);
-      const status = `${result.status} (${new Date().toLocaleString('ja-JP')})`;
-      this.listingSheetService.writeStatus(sheet, status);
       Logger.log(`SKU: ${data.sku} の登録が完了しました - Status: ${result.status}`);
+
+      const fbaResult = this.listingService.switchToFba(data.sku, data.productType);
+      const status = `${result.status} / FBA: ${fbaResult.status} (${new Date().toLocaleString('ja-JP')})`;
+      this.listingSheetService.writeStatus(sheet, status);
+      Logger.log(`SKU: ${data.sku} のFBA切替が完了しました - Status: ${fbaResult.status}`);
     } catch (error) {
       const errorStatus = `エラー: ${error.message} (${new Date().toLocaleString('ja-JP')})`;
       this.listingSheetService.writeStatus(sheet, errorStatus);

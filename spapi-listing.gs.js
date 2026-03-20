@@ -53,4 +53,54 @@ class SpApiListingService {
     Logger.log(`[SpApiListing] SKU: ${sku} - Status: ${json.status}`);
     return json;
   }
+
+  switchToFba(sku, productType) {
+    const accessToken = this.authService.getAccessToken();
+    const sellerId = this.authService.getSellerId();
+
+    const url = `${this.baseUrl}/listings/2021-08-01/items/${sellerId}/${encodeURIComponent(sku)}?marketplaceIds=${this.marketplaceId}`;
+
+    const body = {
+      productType: productType,
+      patches: [
+        {
+          op: 'add',
+          path: '/attributes/fulfillment_availability',
+          value: [{ fulfillment_channel_code: 'AMAZON_JP' }]
+        },
+        {
+          op: 'delete',
+          path: '/attributes/fulfillment_availability',
+          value: [{ fulfillment_channel_code: 'DEFAULT' }]
+        }
+      ]
+    };
+
+    Logger.log('[SpApiListing] FBA切替PATCH: ' + JSON.stringify(body));
+
+    const options = {
+      method: 'patch',
+      contentType: 'application/json',
+      headers: {
+        'x-amz-access-token': accessToken,
+        'user-agent': 'AmznImgAnalyzer/1.0 (Google Apps Script)'
+      },
+      payload: JSON.stringify(body),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    Logger.log(`[SpApiListing] FBA切替レスポンス: ${responseCode} - ${responseText}`);
+
+    if (responseCode !== 200) {
+      throw new Error(`FBA切替エラー: ${responseCode} - ${responseText}`);
+    }
+
+    const json = JSON.parse(responseText);
+    Logger.log(`[SpApiListing] FBA切替完了 SKU: ${sku} - Status: ${json.status}`);
+    return json;
+  }
 }
