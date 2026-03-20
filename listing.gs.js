@@ -306,7 +306,7 @@ function DiagnoseAttributes() {
     }
   }
 
-  const searchTitles = ['輸入', '寸法', 'dimension', 'import', '型番', 'model'];
+  const searchTitles = ['輸入', '寸法', 'dimension', 'import', '型番', 'model', 'release', '発売', 'fulfillment'];
   const required = schemaObj.required || [];
   for (const [key, prop] of Object.entries(properties)) {
     const title = prop.title || '';
