@@ -142,10 +142,11 @@ class ListingSheetService {
     const attrs = {};
     const bulletPoints = [];
     const distributionDesignationMap = {
-      '輸入': 'parallel_import',
-      '並行輸入': 'parallel_import',
-      '並行輸入品': 'parallel_import',
-      '国内': 'jp_domestic'
+      '輸入': 'jp_parallel_import',
+      '並行輸入': 'jp_parallel_import',
+      '並行輸入品': 'jp_parallel_import',
+      '国内': 'default',
+      '正規品': 'default'
     };
 
     for (const [label, value] of Object.entries(data.labelValueMap)) {
@@ -234,11 +235,11 @@ class ListingSheetService {
     if (!attrs.fulfillment_availability) {
       attrs.fulfillment_availability = [{ fulfillment_channel_code: 'AMAZON_JP', marketplace_id: mp }];
     }
-    if (!attrs.item_release_date) {
+    if (!attrs.street_date) {
       const releaseDate = new Date();
       releaseDate.setMonth(releaseDate.getMonth() + 1);
-      const releaseDateStr = Utilities.formatDate(releaseDate, 'Asia/Tokyo', 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
-      attrs.item_release_date = [{ value: releaseDateStr, marketplace_id: mp }];
+      const releaseDateStr = Utilities.formatDate(releaseDate, 'Asia/Tokyo', 'yyyy-MM-dd');
+      attrs.street_date = [{ value: releaseDateStr, marketplace_id: mp }];
     }
 
     return attrs;
@@ -289,7 +290,7 @@ class ListingSheetService {
   }
 
   getAutoSetKeys() {
-    return ['condition_type', 'is_exclusive_product', 'fulfillment_availability', 'item_release_date'];
+    return ['condition_type', 'is_exclusive_product', 'fulfillment_availability', 'street_date'];
   }
 
   getReverseAttributeMap() {
