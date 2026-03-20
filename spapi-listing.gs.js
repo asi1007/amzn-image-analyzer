@@ -72,6 +72,16 @@ class SpApiListingService {
           op: 'delete',
           path: '/attributes/fulfillment_availability',
           value: [{ fulfillment_channel_code: 'DEFAULT' }]
+        },
+        {
+          op: 'replace',
+          path: '/attributes/batteries_required',
+          value: [{ value: 'false', marketplace_id: this.marketplaceId }]
+        },
+        {
+          op: 'replace',
+          path: '/attributes/supplier_declared_dg_hz_regulation',
+          value: [{ value: 'not_applicable', marketplace_id: this.marketplaceId }]
         }
       ]
     };
