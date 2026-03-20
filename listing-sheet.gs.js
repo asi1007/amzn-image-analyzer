@@ -47,7 +47,9 @@ class ListingSheetService {
       '型番': { key: 'model_name', type: 'text' },
       'メーカー型番': { key: 'part_number', type: 'value' },
       '同梱商品': { key: 'included_components', type: 'text' },
-      'サイズ': { key: 'size', type: 'text' }
+      'サイズ': { key: 'size', type: 'text' },
+      '電池本体、電池が必要な商品': { key: 'batteries_required', type: 'value' },
+      '電池付属': { key: 'are_batteries_included', type: 'value' }
     };
   }
 
@@ -241,6 +243,12 @@ class ListingSheetService {
       const releaseDateStr = Utilities.formatDate(releaseDate, 'Asia/Tokyo', 'yyyy-MM-dd');
       attrs.street_date = [{ value: releaseDateStr, marketplace_id: mp }];
     }
+    if (!attrs.batteries_required) {
+      attrs.batteries_required = [{ value: 'false', marketplace_id: mp }];
+    }
+    if (!attrs.are_batteries_included) {
+      attrs.are_batteries_included = [{ value: 'false', marketplace_id: mp }];
+    }
 
     return attrs;
   }
@@ -290,7 +298,7 @@ class ListingSheetService {
   }
 
   getAutoSetKeys() {
-    return ['condition_type', 'is_exclusive_product', 'fulfillment_availability', 'street_date'];
+    return ['condition_type', 'is_exclusive_product', 'fulfillment_availability', 'street_date', 'batteries_required', 'are_batteries_included'];
   }
 
   getReverseAttributeMap() {

@@ -66,6 +66,14 @@ clasp pull          # GAS側の変更をローカルに取得
 
 SP-API設定: エンドポイント `sellingpartnerapi-fe.amazon.com`、マーケットプレイスID `A1VC38T7YXB528` (Amazon.co.jp)。認証は download-amazon-data プロジェクトと同じパターン。
 
+## SP-APIドキュメント参照
+
+SP-APIの仕様確認が必要な場合は、context7を使って公式ドキュメントを参照すること。
+
+- **ライブラリID**: `/websites/developer-docs_amazon_sp-api`
+- **用途**: 属性のキー名、enum値、フォーマット、必須/任意の確認など
+- **使い方**: `mcp__plugin_context7_context7__query-docs` で上記ライブラリIDを指定してクエリする
+
 ## 注意点
 
 - ファイル拡張子は `.gs.js`（clasp設定の `scriptExtensions` で `.js` と `.gs` の両方をサポート）
